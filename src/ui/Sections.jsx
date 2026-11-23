@@ -5,7 +5,7 @@ import { fmt } from './prefs.js'
 import { WhatsApp } from './icons.jsx'
 
 const photos = import.meta.glob('../assets/fleet/*.jpg', { eager: true, query: '?url', import: 'default' })
-const photo = (id) => photos[`../assets/fleet/fleet-${id}.jpg`]
+export const photo = (id) => photos[`../assets/fleet/fleet-${id}.jpg`]
 export const waLink = (text) => `https://wa.me/${PHONE_E164}${text ? `?text=${encodeURIComponent(text)}` : ''}`
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 // what a rental of `days` days comes to at the sample prices (in US dollars): the day rate up to a week, the weekly rate from a week,
@@ -30,24 +30,24 @@ export function Brand({ sub }) {
   )
 }
 
-function CarCard({ c, lang, cur, mode, onPick, tag }) {
-  const f = STR[lang].fleet
+export function CarCard({ c, lang, cur, mode, onOpen, tag }) {
+  const f = STR[lang].fleet, v = STR[lang].det.view
   return (
     <li className="car">
-      <div className="car-photo">{tag && <span className="tag">{tag}</span>}<img src={photo(c.id)} alt={c.name} loading="lazy" decoding="async" /></div>
+      <button type="button" className="car-photo" onClick={() => onOpen(c.id)} tabIndex={-1} aria-hidden="true">{tag && <span className="tag">{tag}</span>}<img src={photo(c.id)} alt="" loading="lazy" decoding="async" /></button>
       <div className="car-body">
-        <h3>{c.name}</h3>
+        <h3><button type="button" className="car-open" onClick={() => onOpen(c.id)}>{c.name}</button></h3>
         <p className="car-meta">{f[c.cat]}, {c.seats} {f.seats}, {c.year}</p>
         <div className="car-foot">
           <span className="price">{fmt(c[mode], cur)}<small>{f[PERS[mode]]}</small></span>
-          <button type="button" className="btn dark" onClick={() => onPick(c.name)} aria-label={`${f.book}: ${c.name}`}>{f.book}</button>
+          <button type="button" className="btn dark" onClick={() => onOpen(c.id)} aria-label={`${v}: ${c.name}`}>{v}</button>
         </div>
       </div>
     </li>
   )
 }
 
-export function Fleet({ lang, cur, view, setView, onPick, onRequest }) {
+export function Fleet({ lang, cur, view, setView, onOpen, onRequest }) {
   const s = STR[lang], f = s.fleet
   const set = (p) => setView((v) => ({ ...v, ...p }))
   const list = useMemo(() => filterFleet(view, f), [view, f])
@@ -88,7 +88,7 @@ export function Fleet({ lang, cur, view, setView, onPick, onRequest }) {
           <p className="fleet-count" aria-live="polite">{f.count(list.length)}</p>
         </div>
         <ul className="cars">
-          {list.map((c) => <CarCard key={c.id} c={c} lang={lang} cur={cur} mode={view.mode} onPick={onPick} />)}
+          {list.map((c) => <CarCard key={c.id} c={c} lang={lang} cur={cur} mode={view.mode} onOpen={onOpen} />)}
           <li className="car other">
             <div className="car-body">
               <h3>{f.other.h}</h3>
@@ -105,7 +105,7 @@ export function Fleet({ lang, cur, view, setView, onPick, onRequest }) {
 }
 
 // the lowest monthly price in each class
-export function Offers({ lang, cur, onPick, onAll }) {
+export function Offers({ lang, cur, onOpen, onAll }) {
   const o = STR[lang].offers, f = STR[lang].fleet
   const best = ['economy', 'suv', 'luxury', 'sport'].map((cat) => FLEET.filter((c) => c.cat === cat).sort((a, b) => a.month - b.month)[0]).filter(Boolean)
   return (
@@ -115,7 +115,7 @@ export function Offers({ lang, cur, onPick, onAll }) {
           <div><h2 id="offers-h">{o.h}</h2><p className="sec-sub">{o.sub}</p></div>
           <button type="button" className="btn dark" onClick={onAll}>{o.all}</button>
         </header>
-        <ul className="cars">{best.map((c) => <CarCard key={c.id} c={c} lang={lang} cur={cur} mode="month" onPick={onPick} tag={`${o.tag}, ${f[c.cat]}`} />)}</ul>
+        <ul className="cars">{best.map((c) => <CarCard key={c.id} c={c} lang={lang} cur={cur} mode="month" onOpen={onOpen} tag={`${o.tag}, ${f[c.cat]}`} />)}</ul>
       </div>
     </section>
   )

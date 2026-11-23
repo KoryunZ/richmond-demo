@@ -50,7 +50,7 @@ with sync_playwright() as p:
     pg.locator('.req .btn').click(); u = pg.evaluate('window.__opened.at(-1)'); txt = urllib.parse.unquote(u or '')
     check('request form → WhatsApp message', 'wa.me/971562479977' in (u or '') and 'Anna' in txt and 'Telegram' in txt, txt[:120])
     # languages
-    for code, word in (('ar', 'احجز'), ('de', 'Buchen'), ('ru', 'Выбрать'), ('en', 'Book')):
+    for code, word in (('ar', 'عرض'), ('de', 'Ansehen'), ('ru', 'Смотреть'), ('en', 'View')):
         if mobile: pg.locator('.burger').click(); pg.locator(f'.mseg button[lang={code}]').click(); pg.locator('.burger').click()
         else: pg.locator('.drop.pref .drop-btn').first.click(); pg.locator(f'.drop-panel button[lang={code}]').click()
         pg.wait_for_timeout(250)

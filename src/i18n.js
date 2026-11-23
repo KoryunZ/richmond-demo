@@ -2,6 +2,7 @@
 // Instagram profile: no deposit, $400 – $10,000 a month, 24/7 support, WhatsApp and calls on +971 56 247 9977.
 import { CHAPTERS, LENGTH, unit, carAt } from './film/timeline.js'
 import { ADD, LANGS } from './i18n-add.js'
+import { DET } from './i18n-car.js'
 export { LANGS }
 
 export const PHONE = '+971 56 247 9977'
@@ -138,22 +139,24 @@ const BASE = {
 
 // Sample fleet for the demo (not Richmond's price list), cheapest first
 const wk = (day, month) => Math.round(Math.min(day * 7, month * 0.38) / 10) * 10
-const car = (id, name, brand, cat, seats, year, day, month) => ({ id, name, brand, cat, seats, year, day, week: wk(day, month), month })
+// engine, hp, 0-100 s, top km/h and drive are typical for each model: to be confirmed against Richmond's actual cars
+const car = (id, name, brand, cat, seats, year, day, month, engine, hp, t100, top, drive) => ({ id, name, brand, cat, seats, year, day, week: wk(day, month), month, engine, hp, t100, top, drive })
 export const FLEET = [
-  car('corolla', 'Toyota Corolla', 'Toyota', 'economy', 5, 2024, 25, 400),
-  car('sonata', 'Hyundai Sonata', 'Hyundai', 'economy', 5, 2024, 30, 550),
-  car('sportage', 'Kia Sportage', 'Kia', 'suv', 5, 2024, 35, 650),
-  car('patrol', 'Nissan Patrol', 'Nissan', 'suv', 7, 2024, 90, 1700),
-  car('raptor', 'Ford Raptor', 'Ford', 'suv', 5, 2023, 130, 2400),
-  car('escalade', 'Cadillac Escalade', 'Cadillac', 'luxury', 7, 2024, 160, 2900),
-  car('rangerover', 'Range Rover Vogue', 'Range Rover', 'luxury', 5, 2023, 210, 3800),
-  car('p911', 'Porsche 911 Carrera', 'Porsche', 'sport', 4, 2024, 300, 5500),
-  car('g63', 'Mercedes-AMG G63', 'Mercedes-Benz', 'luxury', 5, 2023, 350, 6500),
-  car('bentayga', 'Bentley Bentayga', 'Bentley', 'luxury', 5, 2023, 380, 7000),
-  car('urus', 'Lamborghini Urus', 'Lamborghini', 'sport', 5, 2024, 550, 10000),
+  car('corolla', 'Toyota Corolla', 'Toyota', 'economy', 5, 2024, 25, 400, '2.0L 4-cylinder', 169, 9.6, 190, 'FWD'),
+  car('sonata', 'Hyundai Sonata', 'Hyundai', 'economy', 5, 2024, 30, 550, '2.5L 4-cylinder', 191, 8.5, 210, 'FWD'),
+  car('sportage', 'Kia Sportage', 'Kia', 'suv', 5, 2024, 35, 650, '2.5L 4-cylinder', 187, 9.2, 195, 'AWD'),
+  car('patrol', 'Nissan Patrol', 'Nissan', 'suv', 7, 2024, 90, 1700, '3.5L V6 twin-turbo', 425, 6.5, 210, '4WD'),
+  car('raptor', 'Ford Raptor', 'Ford', 'suv', 5, 2023, 130, 2400, '3.5L V6 twin-turbo', 450, 5.1, 180, '4WD'),
+  car('escalade', 'Cadillac Escalade', 'Cadillac', 'luxury', 7, 2024, 160, 2900, '6.2L V8', 420, 6.2, 210, '4WD'),
+  car('rangerover', 'Range Rover Vogue', 'Range Rover', 'luxury', 5, 2023, 210, 3800, '3.0L 6-cylinder turbo hybrid', 400, 5.5, 250, 'AWD'),
+  car('p911', 'Porsche 911 Carrera', 'Porsche', 'sport', 4, 2024, 300, 5500, '3.0L flat-6 twin-turbo', 385, 4.2, 293, 'RWD'),
+  car('g63', 'Mercedes-AMG G63', 'Mercedes-Benz', 'luxury', 5, 2023, 350, 6500, '4.0L V8 twin-turbo', 585, 4.5, 220, '4WD'),
+  car('bentayga', 'Bentley Bentayga', 'Bentley', 'luxury', 5, 2023, 380, 7000, '4.0L V8 twin-turbo', 542, 4.5, 290, 'AWD'),
+  car('urus', 'Lamborghini Urus', 'Lamborghini', 'sport', 5, 2024, 550, 10000, '4.0L V8 twin-turbo', 657, 3.6, 305, 'AWD'),
 ]
 export const BRANDS = [...new Set(FLEET.map((c) => c.brand))]
 
 // the base copy plus the new keys (objects merge, everything else is replaced); ar and de come whole
 const merge = (a, b) => { if (!b || typeof b !== 'object' || Array.isArray(b)) return b; const o = { ...a }; for (const k in b) o[k] = a && typeof a[k] === 'object' && !Array.isArray(a[k]) ? merge(a[k], b[k]) : b[k]; return o }
-export const STR = { en: merge(BASE.en, ADD.en), ru: merge(BASE.ru, ADD.ru), ar: ADD.ar, de: ADD.de }
+const withDet = (o, l) => ({ ...o, det: DET[l] })
+export const STR = { en: withDet(merge(BASE.en, ADD.en), 'en'), ru: withDet(merge(BASE.ru, ADD.ru), 'ru'), ar: withDet(ADD.ar, 'ar'), de: withDet(ADD.de, 'de') }

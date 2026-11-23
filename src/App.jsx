@@ -8,7 +8,8 @@ import Overlay from './ui/Overlay.jsx'
 import Loader from './ui/Loader.jsx'
 import { Fleet, Offers, Calc, Chauffeur, Request, FloatWhatsApp, How, Faq, Book, Footer, NO_FILTER } from './ui/Sections.jsx'
 import Header from './ui/Header.jsx'
-import { STR, TITLES, LANGS } from './i18n.js'
+import CarPage from './ui/CarPage.jsx'
+import { STR, TITLES, LANGS, FLEET } from './i18n.js'
 import { LENGTH } from './film/timeline.js'
 import { attachStepper } from './film/stepper.js'
 import poster from './film/poster.webp'
@@ -29,12 +30,15 @@ const FILM_SCREENS = SCROLL === 'step' ? 4 : Math.max(4, Math.min(14, Math.round
 const SMOOTH = 0.45 // scrub: seconds the film takes to catch up with the scroll position (evens out wheel notches)
 const START_WITH = 0.12 // share of the frames that must be in before the film opens (the rest keeps arriving)
 const RESTS = TITLES.map((c) => c.rest)
+const carFromHash = () => { const m = location.hash.match(/^#\/car\/([\w-]+)/); return m && FLEET.some((c) => c.id === m[1]) ? m[1] : null }
 
 export default function App() {
   const [lang, setLang] = useState(() => { const l = (navigator.language || 'en').toLowerCase().slice(0, 2); return LANGS.some((x) => x.id === l) ? l : 'en' })
   const [cur, setCur] = useState('USD')
   const [view, setView] = useState(NO_FILTER) // what the fleet shows: rate, class, brand, search
   const [days, setDays] = useState(30)
+  const [carId, setCarId] = useState(carFromHash) // the car page is open when the address is #/car/<id>
+  const inApp = useRef(false) // the car page was opened from this page, so closing it can go back one step
   const store = useMemo(createStore, [])
   const [load, setLoad] = useState(0.02)
   const [enough, setEnough] = useState(false) // enough frames have arrived
@@ -48,6 +52,8 @@ export default function App() {
 
   useEffect(() => { document.documentElement.lang = lang; document.documentElement.dir = LANGS.find((l) => l.id === lang).dir }, [lang])
   useEffect(() => { document.documentElement.classList.toggle('locked', !ready) }, [ready])
+  useEffect(() => { const f = () => setCarId(carFromHash()); addEventListener('hashchange', f); return () => removeEventListener('hashchange', f) }, [])
+  useEffect(() => { document.documentElement.classList.toggle('sheet-open', !!carId) }, [carId])
 
   // frames
   useEffect(() => {
@@ -104,9 +110,15 @@ export default function App() {
   }, [store])
 
   const onPainted = useCallback(() => setPainted(true), [])
-  const goTo = useCallback((id) => {
-    gsap.to(window, { scrollTo: { y: `#${id}`, autoKill: true }, duration: 1.3, ease: 'power2.inOut' })
+  // leave the car page (if it is open) without adding a history step, then run `fn` once the page can scroll again
+  const afterCar = useCallback((fn) => {
+    if (!carFromHash()) return fn()
+    history.replaceState(null, '', location.pathname + location.search); setCarId(null); inApp.current = false
+    setTimeout(fn, 60)
   }, [])
+  const goTo = useCallback((id) => afterCar(() => gsap.to(window, { scrollTo: { y: `#${id}`, autoKill: true }, duration: 1.3, ease: 'power2.inOut' })), [afterCar])
+  const openCar = useCallback((id) => { inApp.current = true; location.hash = `#/car/${id}` }, [])
+  const closeCar = useCallback(() => { if (inApp.current) { inApp.current = false; history.back() } else { history.replaceState(null, '', location.pathname + location.search); setCarId(null) } }, [])
   // a click on a chapter tab scrolls to that chapter's resting frame; the film plays there because the scroll does
   const goChapter = useCallback((i) => {
     if (stepper.current) return stepper.current.go(RESTS[i])
@@ -119,12 +131,12 @@ export default function App() {
   const pick = useCallback((name, d) => { setCar(name); if (d) setDays(d); goTo('book') }, [goTo])
   // the menus and footer links: set what the fleet shows, then go there
   const show = useCallback((patch) => { setView((v) => ({ ...v, cat: 'all', brand: '', q: '', ...patch })); goTo('fleet') }, [goTo])
-  const home = useCallback(() => gsap.to(window, { scrollTo: 0, duration: 1.2, ease: 'power2.inOut' }), [])
+  const home = useCallback(() => afterCar(() => gsap.to(window, { scrollTo: 0, duration: 1.2, ease: 'power2.inOut' })), [afterCar])
 
   return (
     <>
       {!loaderGone && <Loader lang={lang} value={load} done={ready} />}
-      <Header lang={lang} setLang={setLang} cur={cur} setCur={setCur} past={past} goTo={goTo} home={home} show={show} />
+      <Header lang={lang} setLang={setLang} cur={cur} setCur={setCur} past={past || !!carId} goTo={goTo} home={home} show={show} />
       <main id="top">
         <section className="film" ref={film}>
           <div className={`stage${failed ? ' still' : ''}`} ref={stage}>
@@ -133,8 +145,8 @@ export default function App() {
             <Overlay progress={progress} lang={lang} onChapter={goChapter} onGoto={goTo} />
           </div>
         </section>
-        <Fleet lang={lang} cur={cur} view={view} setView={setView} onPick={pick} onRequest={() => goTo('request')} />
-        <Offers lang={lang} cur={cur} onPick={pick} onAll={() => show({})} />
+        <Fleet lang={lang} cur={cur} view={view} setView={setView} onOpen={openCar} onRequest={() => goTo('request')} />
+        <Offers lang={lang} cur={cur} onOpen={openCar} onAll={() => show({})} />
         <Calc lang={lang} cur={cur} onBook={pick} />
         <How lang={lang} />
         <Chauffeur lang={lang} />
@@ -143,7 +155,8 @@ export default function App() {
         <Book lang={lang} cur={cur} car={car} setCar={setCar} days={days} setDays={setDays} />
       </main>
       <Footer lang={lang} onGoto={goTo} onShow={show} />
-      <FloatWhatsApp lang={lang} show={past} />
+      <FloatWhatsApp lang={lang} show={past || !!carId} />
+      {carId && <CarPage lang={lang} cur={cur} car={FLEET.find((c) => c.id === carId)} onClose={closeCar} onOpen={openCar} onShow={show} />}
     </>
   )
 }
